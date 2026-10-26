@@ -28,6 +28,7 @@ PUERTO = int(os.environ.get("PANEL_PORT", "3020"))
 REPO = os.environ.get("REPO_DIR", "/repo")
 CFG = BASE + "/cpma/cfg/yimq3a-cpma-{modo}-server-gemini.cfg"
 FASTDL_PUBLICO = os.environ.get("FASTDL_URL", "http://q3dl.thrallguards.com.ar")
+LAUNCHER_URL = os.environ.get("LAUNCHER_URL", f"http://{HOST}:3010")   # nombre largo y miniatura de cada mapa
 ESTATICOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 # los 8 servers fijos: modo -> (puerto, container)
@@ -147,8 +148,19 @@ def rcon(modo, comando):
 
 
 # ------------------------------------------------------------------ datos de cada solapa
+def mapas_launcher():
+    """puerto -> {longname, levelshot} desde el launcher (mismo dato que muestra él). Si no contesta, nada."""
+    try:
+        with urllib.request.urlopen(LAUNCHER_URL + "/api/servers", timeout=3) as r:
+            return {int(x["port"]): {"longname": x.get("longname") or "", "levelshot": x.get("levelshot") or ""}
+                    for x in json.loads(r.read()) if x.get("port")}
+    except Exception:
+        return {}
+
+
 def api_servers():
     cont = estado_containers()
+    extra = mapas_launcher()
     resultado = {"fijos": [], "bajo_demanda": []}
     hilos, datos = [], {}
 
@@ -160,6 +172,11 @@ def api_servers():
         hilos.append(h)
     for h in hilos:
         h.join()
+    for p, e in datos.items():
+        if e:
+            info = extra.get(p, {})
+            e["longname"] = info.get("longname") if info.get("longname") and info.get("longname") != e["mapa"] else ""
+            e["levelshot"] = LAUNCHER_URL + info["levelshot"] if info.get("levelshot") else ""
     for modo, (p, nombre) in FIJOS.items():
         resultado["fijos"].append({"modo": modo, "container": nombre, "docker": cont.get(nombre),
                                    "estado": datos.get(p)})

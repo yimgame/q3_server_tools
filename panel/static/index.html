@@ -32,7 +32,13 @@
   .pill.mal { color: var(--mal); border-color: #5a1f27; background: #2a0f14; }
   .pill.info { color: var(--info); border-color: #1f3f5a; background: #0f1e2a; }
   .pill.humano { color: var(--acento2); border-color: #5a431f; background: #2a1f0f; }
-  .mapa { font-family: var(--mono); color: var(--acento2); font-size: 16px; margin: 8px 0 6px; }
+  .mapa { font-family: var(--mono); color: var(--acento2); font-size: 16px; margin: 8px 0 2px; }
+  .mapa small { font-family: system-ui, sans-serif; color: var(--tenue); font-size: 12px; margin-left: 6px; }
+  .shot { height: 96px; margin: -14px -14px 10px; border-radius: 12px 12px 0 0; background: #0a0c10 center / cover no-repeat; border-bottom: 1px solid var(--borde); }
+  .conectar { display: flex; align-items: center; gap: 8px; width: 100%; margin: 6px 0 4px; padding: 7px 10px; border-radius: 8px; border: 1px dashed #5a431f; background: #1e170c; color: var(--acento2); font: 13px var(--mono); cursor: pointer; text-align: left; }
+  .conectar:hover { border-style: solid; background: #2a1f0f; }
+  .conectar b { font-family: system-ui, sans-serif; color: var(--texto); }
+  .conectar .copiar { margin-left: auto; color: var(--tenue); font: 11px system-ui, sans-serif; }
   .jug { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 10px; min-height: 22px; }
   .jug span { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--panel2); color: var(--tenue); }
   .jug span.h { color: var(--texto); background: #2f2412; border: 1px solid #5a431f; }
@@ -129,12 +135,29 @@ function pillDocker(d) {
   return d.estado === "running" ? `<span class="pill ok" title="${esc(d.detalle)}">● online</span>` : `<span class="pill mal" title="${esc(d.detalle)}">● ${esc(d.estado)}</span>`;
 }
 
+// navigator.clipboard solo anda en HTTPS o localhost: el panel va por HTTP en la LAN, así que hace falta el
+// fallback viejo (textarea + execCommand), igual que el launcher.
+function copiar(texto) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(texto);
+  return new Promise((ok, mal) => {
+    const ta = document.createElement("textarea"); ta.value = texto; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { document.execCommand("copy") ? ok() : mal(new Error("no se pudo copiar")); } catch (e) { mal(e); } finally { document.body.removeChild(ta); }
+  });
+}
+function conectar(boton, puerto) {
+  const texto = `connect ${host}:${puerto}`;
+  copiar(texto).then(() => { toast(`📋 Copiado: ${texto} — pegalo en la consola del juego (tecla ~)`); boton.querySelector(".copiar").textContent = "✅ copiado"; setTimeout(() => boton.querySelector(".copiar").textContent = "📋 copiar", 1800); })
+    .catch((e) => toast("✖ " + e.message));
+}
 function tarjetaServer(titulo, sub, e, docker, botones) {
   const jug = e ? e.jugadores.map((j) => `<span class="${j.bot ? "" : "h"}" title="${j.bot ? "bot" : "humano · ping " + j.ping}">${j.bot ? "🤖" : "👤"} ${esc(j.nombre)} <b>${j.score}</b></span>`).join("") : "";
   return `<div class="tarjeta">
+    ${e && e.levelshot ? `<div class="shot" style="background-image:url('${esc(e.levelshot)}')"></div>` : ""}
     <h3>${esc(titulo)} ${pillDocker(docker)} ${e && e.humanos ? `<span class="pill humano">${e.humanos} humano${e.humanos > 1 ? "s" : ""}</span>` : ""}</h3>
     <div class="sub">${esc(sub)}</div>
-    ${e ? `<div class="mapa">${esc(e.mapa)}</div>
+    ${e ? `<div class="mapa">${esc(e.mapa)}${e.longname ? `<small>${esc(e.longname)}</small>` : ""}</div>
+      <button class="conectar" onclick="conectar(this, ${e.puerto})" title="Copia el comando para pegar en la consola del juego"><b>🔌 Conectar</b> connect ${esc(host)}:${e.puerto}<span class="copiar">📋 copiar</span></button>
       <div class="sub">${e.jugadores.length}/${e.max} jugadores · ${e.bots} bots · responde en ${e.respuesta_ms} ms</div>
       <div class="jug">${jug || '<span>vacío</span>'}</div>` : `<div class="mapa" style="color:var(--mal)">no responde</div>`}
     <div class="botones">${botones}</div></div>`;
