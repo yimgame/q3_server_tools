@@ -25,6 +25,14 @@ server donde nació (8 servers CPMA en 27960-27967, Quake 3 montado en /game).
    arrancar), en un hilo aparte, resuelve cada nombre; si la IP de la cfg ya no es una de las suyas, la cambia en
    todas las cpma/cfg/*server*.cfg y en vivo por rcon en todos los servers. Q3_MASTERS="" lo apaga.
 
+5) Modo de juego correcto: cada server tiene su modo en la cfg (`seta mode_start "TDM"`). CPMA puede quedar en
+   otro (un voto de los jugadores, o un mapa con modo propio si server_useMapModes vuelve a 1) y, una vez
+   cambiado, lo arrastra de mapa en mapa: solo vuelve con un reinicio del server. Cada MODO_INTERVALO s compara
+   mode_current con el de la cfg; si difiere y NO hay humanos (todos ping 0) durante MODO_VACIO_CHEQUEOS
+   revisiones seguidas, lo reinicia por el panel (POST /api/reiniciar?modo=X, el panel tiene el socket de
+   Docker), como mucho una vez cada MODO_ENFRIAMIENTO s por server. Con humanos no se toca: si lo votaron, se
+   respeta hasta que el server quede vacío. Q3_MODO=0 lo apaga.
+
 (Antes este script también forzaba la rotación de CTF, pero buscaba "Map:" -que ioq3 no escribe- y nunca actuó;
  CPMA rota bien solo, así que esa parte se sacó.)
 """
@@ -73,6 +81,12 @@ MASTERS = [m.strip() for m in os.environ.get(
                   "master.maverickservers.com:27950,dpmaster.deathmask.net:27950").split(",") if m.strip()]
 MASTERS_CFGS = BASE + os.environ.get("Q3_MASTERS_CFGS", "/cpma/cfg/*server*.cfg")
 MASTERS_INTERVALO = int(os.environ.get("Q3_MASTERS_INTERVALO", str(6 * 3600)))
+# --- modo de juego correcto (ver 5) ---
+MODO_ACTIVO = os.environ.get("Q3_MODO", "1") != "0"
+PANEL_URL = os.environ.get("Q3_PANEL_URL", "http://127.0.0.1:3020")
+MODO_INTERVALO = int(os.environ.get("Q3_MODO_INTERVALO", "60"))
+MODO_VACIO_CHEQUEOS = int(os.environ.get("Q3_MODO_VACIO_CHEQUEOS", "2"))
+MODO_ENFRIAMIENTO = int(os.environ.get("Q3_MODO_ENFRIAMIENTO", "900"))
 MASTER_RE = re.compile(r'(?im)^\s*seta\s+sv_master(\d)\s+"([^":]+)(?::(\d+))?"[^\r\n]*')
 HEALTHCHECK_FAILS_TO_RESTART = 3
 RESTART_COOLDOWN = 90
@@ -308,6 +322,69 @@ def actualizar_masters(servers):
         print(f"[masters] IPs al día ({len(cambios)}/{len(MASTERS)} resueltas)", flush=True)
 
 
+def estado_modo(port):
+    """(mode_current, humanos) por getstatus; (None, None) si no contesta."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(1.5)
+    try:
+        sock.sendto(b"\xff\xff\xff\xffgetstatus\n", (RCON_HOST, port))
+        datos = sock.recv(65535).decode("latin1")
+    except OSError:
+        return None, None
+    finally:
+        sock.close()
+    lineas = datos.split("\n")
+    partes = lineas[1].split("\\")[1:] if len(lineas) > 1 else []
+    info = dict(zip(partes[0::2], partes[1::2]))
+    humanos = sum(1 for l in lineas[2:] if re.match(r'^-?\d+ [1-9]\d* "', l.strip()))
+    return info.get("mode_current"), humanos
+
+
+def modo_esperado(modo):
+    try:
+        m = re.search(r'(?im)^\s*seta?\s+mode_start\s+"?([^"\s]+)', open(CFG.format(modo=modo), errors="replace").read())
+        return m.group(1).upper() if m else None
+    except OSError:
+        return None
+
+
+def vigilar_modos(servers):
+    vacios, ultimo_reinicio, avisado = {}, {}, {}
+    while True:
+        time.sleep(MODO_INTERVALO)
+        for s in servers:
+            try:
+                esperado = modo_esperado(s.modo)
+                actual, humanos = estado_modo(s.port)
+                if not esperado or actual is None:          # sin modo en la cfg, o CPMA no lo informa (RA3)
+                    continue
+                if actual.upper() == esperado:
+                    vacios[s.modo] = 0
+                    avisado.pop(s.modo, None)
+                    continue
+                if humanos:
+                    vacios[s.modo] = 0
+                    if not avisado.get(s.modo):
+                        print(f"[modo] {s.modo}: está en {actual} (debería {esperado}) pero hay {humanos} humano(s): "
+                              f"lo respeto hasta que quede vacío", flush=True)
+                        avisado[s.modo] = True
+                    continue
+                vacios[s.modo] = vacios.get(s.modo, 0) + 1
+                if vacios[s.modo] < MODO_VACIO_CHEQUEOS:
+                    continue
+                if time.time() - ultimo_reinicio.get(s.modo, 0) < MODO_ENFRIAMIENTO:
+                    continue
+                print(f"[modo] {s.modo}: está en {actual} y debería {esperado}, sin humanos: lo reinicio", flush=True)
+                ultimo_reinicio[s.modo] = time.time()
+                vacios[s.modo] = 0
+                import urllib.request
+                req = urllib.request.Request(f"{PANEL_URL}/api/reiniciar?modo={s.modo}", method="POST")
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    print(f"[modo] {s.modo}: {r.read().decode()[:120]}", flush=True)
+            except Exception as e:
+                print(f"[modo] {s.modo}: error: {e}", flush=True)
+
+
 def vigilar_masters(servers):
     while True:
         try:
@@ -330,6 +407,8 @@ def main():
     print("[watcher] sincronizando alias en", ", ".join(SERVERS), flush=True)
     if MASTERS:
         threading.Thread(target=vigilar_masters, args=(servers,), daemon=True).start()
+    if MODO_ACTIVO:
+        threading.Thread(target=vigilar_modos, args=(servers,), daemon=True).start()
     fallos, ultimo_chequeo, gracia = 0, 0.0, 0.0
     while True:
         time.sleep(2)

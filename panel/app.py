@@ -267,7 +267,8 @@ class Handler(BaseHTTPRequestHandler):
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
             if u.path == "/api/reiniciar":
-                nombre = q.get("container", "")
+                # por container, o por modo (lo usa el watcher para devolver un server vacío a su modo)
+                nombre = q.get("container", "") or FIJOS.get(q.get("modo", ""), (0, ""))[1]
                 if nombre not in REINICIABLES:
                     return self._json({"error": "ese container no se reinicia desde acá"}, 400)
                 docker("POST", f"/containers/{nombre}/restart?t=5")

@@ -79,3 +79,23 @@ nombres y, si la IP de la cfg ya no es una de las suyas, la cambia en las cfg y 
 | `Q3_MASTERS` | `master.quake3arena.com,directory.ioquake3.org,master.quakeservers.net:27950,master.maverickservers.com:27950,dpmaster.deathmask.net:27950` | nombres de sv_master1..N en orden (`""` apaga la tarea) |
 | `Q3_MASTERS_CFGS` | `/cpma/cfg/*server*.cfg` | cfg donde están las líneas `seta sv_masterN` |
 | `Q3_MASTERS_INTERVALO` | `21600` | cada cuántos segundos revisa |
+
+## Modo de juego correcto (2026-10-26)
+
+Cada server tiene su modo en la cfg (`seta mode_start "TDM"`). CPMA puede quedar en otro: por un voto de los
+jugadores, o porque con `server_useMapModes 1` un mapa impone su modo (cure, pro-q3dm6... son "de 1v1"). Una vez
+cambiado, CPMA lo arrastra de mapa en mapa y **solo vuelve reiniciando el server** (`game_restart` lo cuelga y
+`map` no lo cambia). Por eso las cfg tienen `seta server_useMapModes 0` y el watcher, cada minuto, compara
+`mode_current` con el `mode_start` de la cfg:
+
+- **con humanos** no toca nada (si lo votaron, se respeta);
+- **sin humanos** durante 2 revisiones seguidas, lo reinicia por el panel (`POST /api/reiniciar?modo=X`), como mucho
+  una vez cada 15 min por server.
+
+| Variable | Por defecto | Qué es |
+|---|---|---|
+| `Q3_MODO` | `1` | `0` apaga la tarea |
+| `Q3_PANEL_URL` | `http://127.0.0.1:3020` | panel que hace el reinicio (tiene el socket de Docker) |
+| `Q3_MODO_INTERVALO` | `60` | segundos entre revisiones |
+| `Q3_MODO_VACIO_CHEQUEOS` | `2` | revisiones seguidas sin humanos antes de reiniciar |
+| `Q3_MODO_ENFRIAMIENTO` | `900` | mínimo de segundos entre reinicios del mismo server |
