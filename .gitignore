@@ -1,9 +1,17 @@
 # claves y secretos: nunca al repo
 *_key
+*_key.pub
 *.key
 *.pem
+id_rsa*
+id_ed25519*
 .env
 .env.*
+!.env.example
+# configs de producción del juego (tienen rconpassword / sv_privatePassword): viven en la carpeta de Quake 3
+*.cfg
+q3config*.cfg
+config.json
 # backups locales y basura
 *.bak-*
 __pycache__/

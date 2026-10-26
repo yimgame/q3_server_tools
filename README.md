@@ -35,9 +35,10 @@ actualizar acá y viceversa).
 - **Aviso por Telegram cuando entra un humano** (`q3_humanos.py`) y el monitoreo general: repo de administración del
   homelab (LXC 104), porque usan sus credenciales.
 
-## Secretos
+## Configuración y secretos
 
-Nada de claves en este repo. La rcon password está en las cfg del juego (`cpma/cfg/*server*.cfg`) y en los `.env`
+Todas las variables están en [`.env.example`](.env.example) con valores de ejemplo (copiarlo a `.env`, que está
+en `.gitignore`). Nada de claves en este repo. La rcon password está en las cfg del juego (`cpma/cfg/*server*.cfg`) y en los `.env`
 de quien la usa; el watcher la lee de la cfg. La key SSH del watcher (`Quake3/scripts/pve_ctf_watcher_key`) es de un
 forced command del host que solo puede reiniciar el server CTF; nunca va al repo (`.gitignore`).
 
