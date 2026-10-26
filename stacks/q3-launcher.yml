@@ -1,0 +1,25 @@
+# Q3 Launcher (:3010) — código en projects/q3_server_launcher (github yimgame/q3a-server-launcher).
+# OJO: el container que corre hoy NO es del stack Portainer 41 (se creó por fuera); este compose refleja cómo
+# corre de verdad (código montado desde el NAS, no en un volumen). El stack 41 de Portainer quedó desactualizado.
+services:
+  q3-launcher:
+    image: node:22-alpine
+    container_name: q3-launcher
+    working_dir: /app
+    ports:
+      - "3010:80"
+    volumes:
+      - /mnt/ssd-jellyfin/projects/q3_server_launcher:/app
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/quake3:rw
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+    command:
+      - sh
+      - -lc
+      - |
+        while [ ! -f /app/package.json ]; do echo "esperando archivos..."; sleep 3; done
+        cd /app
+        npm install --no-fund --no-audit
+        npx --yes tsx server.ts
+    restart: unless-stopped

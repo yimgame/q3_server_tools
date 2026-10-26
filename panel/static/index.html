@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Q3 Server Tools</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<style>
+  :root {
+    --bg: #0d0f14; --panel: #151922; --panel2: #1b2030; --borde: #262c3d; --texto: #e6e9f0; --tenue: #8b93a7;
+    --acento: #ff6a3d; --acento2: #ffb02e; --ok: #3ddc84; --mal: #ff4d5e; --info: #4db5ff;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--texto); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: linear-gradient(90deg, #1a0f0b, var(--bg) 60%); border-bottom: 1px solid var(--borde); flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .5px; }
+  header h1 span { color: var(--acento); }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav button { background: transparent; color: var(--tenue); border: 1px solid transparent; border-radius: 8px; padding: 7px 12px; font: inherit; cursor: pointer; }
+  nav button:hover { color: var(--texto); background: var(--panel); }
+  nav button.activa { color: var(--texto); background: var(--panel2); border-color: var(--borde); box-shadow: inset 0 -2px 0 var(--acento); }
+  .derecha { margin-left: auto; color: var(--tenue); font-size: 12px; }
+  main { padding: 16px; max-width: 1500px; margin: 0 auto; }
+  .solapa { display: none; } .solapa.activa { display: block; }
+  .grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 14px; min-width: 0; }
+  .tarjeta h3 { margin: 0 0 4px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .sub { color: var(--tenue); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid var(--borde); }
+  .pill.ok { color: var(--ok); border-color: #1f5a3a; background: #0f2a1d; }
+  .pill.mal { color: var(--mal); border-color: #5a1f27; background: #2a0f14; }
+  .pill.info { color: var(--info); border-color: #1f3f5a; background: #0f1e2a; }
+  .pill.humano { color: var(--acento2); border-color: #5a431f; background: #2a1f0f; }
+  .mapa { font-family: var(--mono); color: var(--acento2); font-size: 16px; margin: 8px 0 6px; }
+  .jug { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 10px; min-height: 22px; }
+  .jug span { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--panel2); color: var(--tenue); }
+  .jug span.h { color: var(--texto); background: #2f2412; border: 1px solid #5a431f; }
+  .botones { display: flex; flex-wrap: wrap; gap: 6px; }
+  button.b { background: var(--panel2); color: var(--texto); border: 1px solid var(--borde); border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+  button.b:hover { border-color: var(--acento); }
+  button.b.peligro:hover { border-color: var(--mal); color: var(--mal); }
+  pre.log { background: #090b0f; border: 1px solid var(--borde); border-radius: 10px; padding: 10px; font: 12px/1.45 var(--mono); max-height: 460px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--borde); }
+  th { color: var(--tenue); font-weight: 500; }
+  td.mono { font-family: var(--mono); }
+  .marco { width: 100%; height: calc(100vh - 150px); min-height: 500px; border: 1px solid var(--borde); border-radius: 12px; background: #fff; }
+  .barra-marco { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: var(--tenue); font-size: 12px; gap: 8px; flex-wrap: wrap; }
+  a { color: var(--info); }
+  .resumen { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .resumen .tarjeta { padding: 10px 14px; min-width: 150px; }
+  .num { font-size: 22px; font-weight: 700; }
+  h2 { font-size: 15px; margin: 18px 0 8px; color: var(--tenue); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; }
+  #toast { position: fixed; bottom: 16px; right: 16px; background: var(--panel2); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 14px; display: none; max-width: 420px; z-index: 9; }
+  details summary { cursor: pointer; padding: 8px 0; }
+  @media (max-width: 640px) { main { padding: 10px; } .marco { height: 75vh; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎯 <span>Q3</span> Server Tools</h1>
+  <nav id="nav">
+    <button data-s="servers" class="activa">🖥️ Servers</button>
+    <button data-s="launcher">🚀 Launcher</button>
+    <button data-s="generador">🗺️ Generador</button>
+    <button data-s="watcher">👁️ Watcher</button>
+    <button data-s="fastdl">📦 FastDL</button>
+    <button data-s="compose">🧩 Compose</button>
+  </nav>
+  <div class="derecha" id="reloj"></div>
+</header>
+<main>
+  <section class="solapa activa" id="s-servers">
+    <div class="resumen" id="resumen"></div>
+    <div class="grilla" id="grilla-servers"></div>
+    <h2>Bajo demanda (launcher)</h2>
+    <div class="grilla" id="grilla-demanda"></div>
+  </section>
+
+  <section class="solapa" id="s-launcher">
+    <div class="barra-marco"><span>Launcher: servers bajo demanda, mapas, consolas</span><a id="link-launcher" target="_blank">abrir aparte ↗</a></div>
+    <iframe class="marco" id="if-launcher" title="Launcher" loading="lazy"></iframe>
+  </section>
+
+  <section class="solapa" id="s-generador">
+    <div class="barra-marco"><span>Generador de listas de mapas y nextmap</span><a id="link-generador" target="_blank">abrir aparte ↗</a></div>
+    <iframe class="marco" id="if-generador" title="Generador" loading="lazy"></iframe>
+  </section>
+
+  <section class="solapa" id="s-watcher">
+    <div class="resumen" id="watcher-resumen"></div>
+    <div class="grilla">
+      <div class="tarjeta"><h3>Master servers (IP fija)</h3><table id="masters"></table></div>
+      <div class="tarjeta"><h3>AAS de bots generados</h3><table id="aas"></table></div>
+    </div>
+    <h2>Log del watcher</h2>
+    <pre class="log" id="watcher-log"></pre>
+  </section>
+
+  <section class="solapa" id="s-fastdl">
+    <div class="resumen" id="fastdl-resumen"></div>
+    <div class="grilla">
+      <div class="tarjeta"><h3>Prueba de descarga</h3><table id="fastdl-prueba"></table></div>
+      <div class="tarjeta"><h3>Últimos pk3 agregados</h3><table id="fastdl-recientes"></table></div>
+    </div>
+    <h2>Últimas descargas</h2>
+    <pre class="log" id="fastdl-log"></pre>
+  </section>
+
+  <section class="solapa" id="s-compose">
+    <p class="sub" style="white-space:normal">Composes del repo <b>q3_server_tools</b> (copia de lo que corre en Portainer).</p>
+    <div id="compose"></div>
+  </section>
+</main>
+<div id="toast"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const host = location.hostname;
+const URLS = { launcher: `http://${host}:3010/`, generador: `http://${host}:5050/` };
+const NOMBRES = { ffa: "Free For All", "1v1": "1v1 Duelo", "2v2": "2v2 TDM", tdm: "Team Deathmatch", ctf: "Capture the Flag", ca: "Clan Arena", ft: "Freeze Tag", ra3: "Rocket Arena" };
+let actual = "servers", timer = null;
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 4000); }
+async function api(url, opts) { const r = await fetch(url, opts); const d = await r.json(); if (!r.ok || d.error) throw new Error(d.error || r.status); return d; }
+function pillDocker(d) {
+  if (!d) return `<span class="pill mal">sin container</span>`;
+  return d.estado === "running" ? `<span class="pill ok" title="${esc(d.detalle)}">● online</span>` : `<span class="pill mal" title="${esc(d.detalle)}">● ${esc(d.estado)}</span>`;
+}
+
+function tarjetaServer(titulo, sub, e, docker, botones) {
+  const jug = e ? e.jugadores.map((j) => `<span class="${j.bot ? "" : "h"}" title="${j.bot ? "bot" : "humano · ping " + j.ping}">${j.bot ? "🤖" : "👤"} ${esc(j.nombre)} <b>${j.score}</b></span>`).join("") : "";
+  return `<div class="tarjeta">
+    <h3>${esc(titulo)} ${pillDocker(docker)} ${e && e.humanos ? `<span class="pill humano">${e.humanos} humano${e.humanos > 1 ? "s" : ""}</span>` : ""}</h3>
+    <div class="sub">${esc(sub)}</div>
+    ${e ? `<div class="mapa">${esc(e.mapa)}</div>
+      <div class="sub">${e.jugadores.length}/${e.max} jugadores · ${e.bots} bots · responde en ${e.respuesta_ms} ms</div>
+      <div class="jug">${jug || '<span>vacío</span>'}</div>` : `<div class="mapa" style="color:var(--mal)">no responde</div>`}
+    <div class="botones">${botones}</div></div>`;
+}
+
+async function cargarServers() {
+  const d = await api("/api/servers");
+  let humanos = 0, bots = 0, online = 0;
+  $("#grilla-servers").innerHTML = d.fijos.map((s) => {
+    const e = s.estado; if (e) { humanos += e.humanos; bots += e.bots; online++; }
+    const b = `<button class="b" onclick="mapa('${s.modo}','anterior')">⏮ Anterior</button>
+      <button class="b" onclick="mapa('${s.modo}','siguiente')">Siguiente ⏭</button>
+      <button class="b" onclick="mapa('${s.modo}','volver')" title="vuelve al mapa de antes">↩ Volver</button>
+      <button class="b peligro" onclick="reiniciar('${s.container}')">⟳ Reiniciar</button>`;
+    return tarjetaServer(NOMBRES[s.modo] || s.modo, `${s.container} · puerto ${e ? e.puerto : ""}${e ? " · " + e.host : ""}`, e, s.docker, b);
+  }).join("");
+  $("#grilla-demanda").innerHTML = d.bajo_demanda.length ? d.bajo_demanda.map((s) => tarjetaServer(s.estado.host || ("puerto " + s.puerto), "puerto " + s.puerto, s.estado, { estado: "running", detalle: "lanzado por el launcher" }, "")).join("")
+    : `<div class="sub">Ninguno corriendo. Se lanzan desde la solapa Launcher.</div>`;
+  $("#resumen").innerHTML = `
+    <div class="tarjeta"><div class="sub">Servers online</div><div class="num">${online}/${d.fijos.length}</div></div>
+    <div class="tarjeta"><div class="sub">Humanos jugando</div><div class="num" style="color:var(--acento2)">${humanos}</div></div>
+    <div class="tarjeta"><div class="sub">Bots</div><div class="num">${bots}</div></div>
+    <div class="tarjeta"><div class="sub">Bajo demanda</div><div class="num">${d.bajo_demanda.length}</div></div>`;
+}
+
+async function cargarWatcher() {
+  const d = await api("/api/watcher");
+  $("#watcher-resumen").innerHTML = `
+    <div class="tarjeta"><div class="sub">Watcher</div><div class="num">${pillDocker(d.docker)}</div><div class="sub">${esc(d.docker?.detalle || "")}</div></div>
+    <div class="tarjeta"><div class="sub">AAS generados</div><div class="num">${d.aas_total}</div></div>
+    <div class="tarjeta"><div class="sub">Acciones</div><div class="botones" style="margin-top:6px"><button class="b peligro" onclick="reiniciar('quake3_ctf_nextmap_watcher')">⟳ Reiniciar watcher</button></div></div>`;
+  $("#masters").innerHTML = `<tr><th>#</th><th>Master</th><th>IP</th></tr>` + d.masters.map((m) => `<tr><td>${m.n}</td><td>${esc(m.nombre)}</td><td class="mono">${esc(m.ip)}</td></tr>`).join("");
+  $("#aas").innerHTML = `<tr><th>Mapa</th><th>Server</th><th>Fecha</th><th>Estado</th></tr>` + d.aas.map((a) => `<tr><td class="mono">${esc(a.mapa)}</td><td>${esc(a.server)}</td><td>${esc(a.fecha)}</td><td><span class="pill ${a.estado === "ok" ? "ok" : "mal"}" title="${esc(a.nota || a.error || "")}">${esc(a.estado)}</span></td></tr>`).join("");
+  const log = $("#watcher-log"), abajo = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
+  log.textContent = d.log.map((l) => l.replace(/^(\d{4}-\d\d-\d\d)T(\d\d:\d\d:\d\d)\.\d+Z/, "$1 $2Z")).join("\n");
+  if (abajo) log.scrollTop = log.scrollHeight;
+}
+
+async function cargarFastdl() {
+  const d = await api("/api/fastdl");
+  $("#fastdl-resumen").innerHTML = `
+    <div class="tarjeta"><div class="sub">FastDL (nginx :8091)</div><div class="num">${pillDocker(d.docker)}</div></div>
+    <div class="tarjeta"><div class="sub">pk3 servidos</div><div class="num">${d.pk3}</div></div>
+    <div class="tarjeta"><div class="sub">Tamaño total</div><div class="num">${d.total_gb} GB</div></div>
+    <div class="tarjeta"><div class="sub">Acciones</div><div class="botones" style="margin-top:6px"><button class="b peligro" onclick="reiniciar('q3-fastdl')">⟳ Reiniciar FastDL</button></div></div>`;
+  $("#fastdl-prueba").innerHTML = `<tr><th>Desde</th><th>Resultado</th></tr>` + Object.entries(d.prueba).map(([k, v]) => `<tr><td>${k}</td><td>${v.codigo ? `<span class="pill ${v.codigo === 200 ? "ok" : "mal"}">${v.codigo}</span> ${v.ms} ms` : `<span class="pill mal">error</span> ${esc(v.error)}`}<div class="sub">${esc(v.url)}</div></td></tr>`).join("");
+  $("#fastdl-recientes").innerHTML = `<tr><th>Archivo</th><th>MB</th><th>Fecha</th></tr>` + d.recientes.map((r) => `<tr><td class="mono">${esc(r.archivo)}</td><td>${r.mb}</td><td>${esc(r.fecha)}</td></tr>`).join("");
+  $("#fastdl-log").textContent = d.log.join("\n") || "(sin descargas en el log reciente)";
+}
+
+async function cargarCompose() {
+  const d = await api("/api/compose");
+  $("#compose").innerHTML = d.map((f, i) => `<details class="tarjeta" style="margin-bottom:10px" ${i === 0 ? "open" : ""}><summary><b>${esc(f.archivo)}</b></summary><pre class="log">${esc(f.texto)}</pre></details>`).join("");
+}
+
+const CARGAS = { servers: cargarServers, watcher: cargarWatcher, fastdl: cargarFastdl, compose: cargarCompose };
+async function refrescar() {
+  const f = CARGAS[actual]; if (!f) return;
+  try { await f(); $("#reloj").textContent = "actualizado " + new Date().toLocaleTimeString("es-AR"); }
+  catch (e) { $("#reloj").textContent = "error: " + e.message; }
+}
+function mostrar(s) {
+  actual = s;
+  document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("activa", b.dataset.s === s));
+  document.querySelectorAll(".solapa").forEach((x) => x.classList.toggle("activa", x.id === "s-" + s));
+  if (URLS[s]) { const f = $("#if-" + s); if (!f.src) f.src = URLS[s]; }
+  try { localStorage.setItem("q3panel-solapa", s); } catch (e) {}
+  history.replaceState(null, "", "#" + s);
+  clearInterval(timer); refrescar();
+  if (s === "servers" || s === "watcher") timer = setInterval(refrescar, s === "servers" ? 5000 : 8000);
+}
+async function reiniciar(c) {
+  if (!confirm(`¿Reiniciar ${c}? Los jugadores conectados se cortan unos segundos.`)) return;
+  try { const d = await api(`/api/reiniciar?container=${encodeURIComponent(c)}`, { method: "POST" }); toast("✔ " + d.mensaje); setTimeout(refrescar, 3000); }
+  catch (e) { toast("✖ " + e.message); }
+}
+async function mapa(modo, accion) {
+  try { await api(`/api/mapa?modo=${modo}&accion=${accion}`, { method: "POST" }); toast(`✔ ${NOMBRES[modo]}: ${accion}`); setTimeout(refrescar, 2500); }
+  catch (e) { toast("✖ " + e.message); }
+}
+document.querySelectorAll("nav button").forEach((b) => b.onclick = () => mostrar(b.dataset.s));
+$("#link-launcher").href = URLS.launcher; $("#link-generador").href = URLS.generador;
+let inicial = location.hash.slice(1);
+if (!document.getElementById("s-" + inicial)) { try { inicial = localStorage.getItem("q3panel-solapa") || "servers"; } catch (e) { inicial = "servers"; } }
+mostrar(document.getElementById("s-" + inicial) ? inicial : "servers");
+</script>
+</body>
+</html>

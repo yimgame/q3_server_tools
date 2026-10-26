@@ -1,0 +1,28 @@
+# Q3 Map Config Generator (stack 39) — web :5050
+# Corre directo desde la carpeta del repo en el NAS (projects\q3-map-config-generator, git → github
+# yimgame/Quake-3-Map-List-Config-Generator): lo que se pushea es lo que corre. config.json (gitignorado) tiene
+# las rutas /quake3/... y q3_host para el rcon. Antes el código estaba copiado en el volumen q3mapcfg_app (2026-10-17).
+services:
+  q3-map-config-generator:
+    image: python:3.13-slim
+    container_name: q3-map-config-generator
+    working_dir: /app
+    ports:
+      - "5050:5000"
+    volumes:
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/quake3:rw
+      - /mnt/ssd-jellyfin/projects/q3-map-config-generator:/app
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+      - PYTHONDONTWRITEBYTECODE=1
+    command:
+      - bash
+      - -lc
+      - |
+        pip install --no-cache-dir --quiet flask
+        mkdir -p /quake3/cpma/cfg-ra3
+        python /app/app.py
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "2" }

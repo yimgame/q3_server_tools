@@ -1,0 +1,21 @@
+# Panel unificado (:3020) — panel/ de este repo. Solo LAN (sin login, como el launcher): no publicarlo.
+# Lee el estado por Docker (socket) y por UDP; la rcon password la saca de las cfg del juego.
+services:
+  q3-panel:
+    image: python:3.13-slim
+    container_name: q3-panel
+    ports:
+      - "3020:3020"
+    volumes:
+      - /mnt/ssd-jellyfin/projects/q3_server_tools:/repo:ro
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/game:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+      - PYTHONDONTWRITEBYTECODE=1
+      - Q3_HOST=192.168.0.202
+    command: ["python3", "-u", "/repo/panel/app.py"]
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "2" }

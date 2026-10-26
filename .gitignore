@@ -1,0 +1,11 @@
+# claves y secretos: nunca al repo
+*_key
+*.key
+*.pem
+.env
+.env.*
+# backups locales y basura
+*.bak-*
+__pycache__/
+*.pyc
+*.log

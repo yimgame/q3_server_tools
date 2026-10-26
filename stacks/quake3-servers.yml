@@ -1,0 +1,356 @@
+version: "3.9"
+
+services:
+  # Watcher (codigo en projects/q3_server_tools/watcher, github yimgame/q3_server_tools):
+  # alias next/prev/volver en los 8 servers, AAS de bots automatico con bspc y salud de CTF
+  quake3_ctf_nextmap_watcher:
+    image: python:3.13-slim
+    container_name: quake3_ctf_nextmap_watcher
+    network_mode: host
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+    volumes:
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/game:rw
+      - /mnt/ssd-jellyfin/projects/q3_server_tools/watcher:/watcher:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - bash
+      - -lc
+      - |
+        # el volumen /game es de red (SMB/NAS) y no respeta permisos unix reales,
+        # ssh rechaza la key ahi por "permisos demasiado abiertos" -- la copiamos
+        # al filesystem local del contenedor, donde chmod si funciona de verdad.
+        mkdir -p /root/.ssh
+        cp /game/scripts/pve_ctf_watcher_key /root/.ssh/watcher_key
+        chmod 600 /root/.ssh/watcher_key
+        which ssh >/dev/null 2>&1 || (apt-get update -qq && apt-get install -y --no-install-recommends openssh-client -qq)
+        exec python3 /watcher/q3_watcher.py
+    restart: unless-stopped
+    depends_on:
+      - quake3_ctf
+
+  # Servidor: FFA (Free For All)
+  quake3_ffa:
+    image: ubuntu:24.04
+    container_name: quake3_ffa
+    working_dir: /game
+    network_mode: host
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+    volumes:
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/game:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - bash
+      - -lc
+      - |
+        chmod +x /game/ioq3ded.x86_64 || true
+        # Motor alternativo (a mano si hace falta volver): /game/cnq3-server-x64
+        mkdir -p /game/instances/srv_ffa
+        /game/ioq3ded.x86_64 \
+        +set fs_basepath /game \
+        +set fs_homepath /game/instances/srv_ffa \
+        +set fs_game cpma \
+        +set dedicated 2 \
+        +set net_port 27960 \
+        +set sv_allowDownload 1 \
+        +set sv_pure 1 \
+        +set sv_dlURL "https://q3dl.thrallguards.com.ar/" \
+        +set mode_start ffa \
+        +set g_gametype 0 \
+        +set com_hunkMegs 256 \
+        +set com_zoneMegs 128 \
+        +set com_soundMegs 128 \
+        +set logfile 3 \
+        +exec cfg/yimq3a-cpma-ffa-server-gemini.cfg \
+        +exec cfg-maps/nextmap_ffa.cfg \
+        +set server_motdfile "motd.txt" \
+        +set sv_demoRecord 1
+    restart: unless-stopped
+
+  # Servidor: 1v1 (Duel / CPM)
+  quake3_1v1:
+    image: ubuntu:24.04
+    container_name: quake3_1v1
+    working_dir: /game
+    network_mode: host
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+    volumes:
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/game:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - bash
+      - -lc
+      - |
+        chmod +x /game/ioq3ded.x86_64 || true
+        # Motor alternativo (a mano si hace falta volver): /game/cnq3-server-x64
+        mkdir -p /game/instances/srv_1v1
+        /game/ioq3ded.x86_64 \
+        +set fs_basepath /game \
+        +set fs_homepath /game/instances/srv_1v1 \
+        +set fs_game cpma \
+        +set dedicated 2 \
+        +set net_port 27961 \
+        +set sv_allowDownload 1 \
+        +set sv_pure 1 \
+        +set sv_dlURL "https://q3dl.thrallguards.com.ar/" \
+        +set mode_start 1v1 \
+        +set g_gametype 1 \
+        +set com_hunkMegs 256 \
+        +set com_zoneMegs 128 \
+        +set com_soundMegs 128 \
+        +set logfile 3 \
+        +exec cfg/yimq3a-cpma-1v1-server-gemini.cfg \
+        +exec cfg-maps/nextmap_1v1.cfg \
+        +set server_motdfile "motd.txt" \
+        +set sv_demoRecord 1
+    restart: unless-stopped
+
+  # Servidor: 2v2 (Team Duel / CPM)
+  quake3_2v2:
+    image: ubuntu:24.04
+    container_name: quake3_2v2
+    working_dir: /game
+    network_mode: host
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+    volumes:
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/game:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - bash
+      - -lc
+      - |
+        chmod +x /game/ioq3ded.x86_64 || true
+        # Motor alternativo (a mano si hace falta volver): /game/cnq3-server-x64
+        mkdir -p /game/instances/srv_2v2
+        /game/ioq3ded.x86_64 \
+        +set fs_basepath /game \
+        +set fs_homepath /game/instances/srv_2v2 \
+        +set fs_game cpma \
+        +set dedicated 2 \
+        +set net_port 27962 \
+        +set sv_allowDownload 1 \
+        +set sv_pure 1 \
+        +set sv_dlURL "https://q3dl.thrallguards.com.ar/" \
+        +set mode_start 2v2 \
+        +set g_gametype 8 \
+        +set com_hunkMegs 256 \
+        +set com_zoneMegs 128 \
+        +set com_soundMegs 128 \
+        +set logfile 3 \
+        +exec cfg/yimq3a-cpma-2v2-server-gemini.cfg \
+        +exec cfg-maps/nextmap_2v2.cfg \
+        +set server_motdfile "motd.txt" \
+        +set sv_demoRecord 1
+    restart: unless-stopped
+
+  # Servidor: TDM (Team Deathmatch)
+  quake3_tdm:
+    image: ubuntu:24.04
+    container_name: quake3_tdm
+    working_dir: /game
+    network_mode: host
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+    volumes:
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/game:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - bash
+      - -lc
+      - |
+        chmod +x /game/ioq3ded.x86_64 || true
+        # Motor anterior (cnq3-server-x64): migrado a ioq3ded (mismo motor
+        # que el resto) el 2026-09-27, ahora compilado desde fuente propia.
+        mkdir -p /game/instances/srv_tdm
+        /game/ioq3ded.x86_64 \
+        +set fs_basepath /game \
+        +set fs_homepath /game/instances/srv_tdm \
+        +set fs_game cpma \
+        +set dedicated 2 \
+        +set net_port 27963 \
+        +set sv_allowDownload 1 \
+        +set sv_pure 1 \
+        +set sv_dlURL "https://q3dl.thrallguards.com.ar/" \
+        +set mode_start TDM \
+        +set g_gametype 3 \
+        +set com_hunkMegs 256 \
+        +set com_zoneMegs 128 \
+        +set com_soundMegs 128 \
+        +set logfile 3 \
+        +exec cfg/yimq3a-cpma-tdm-server-gemini.cfg \
+        +exec cfg-maps/nextmap_tdm.cfg \
+        +set server_motdfile "motd.txt" \
+        +set sv_demoRecord 1
+    restart: unless-stopped
+
+  # Servidor: CTF (Capture The Flag)
+  quake3_ctf:
+    image: ubuntu:24.04
+    container_name: quake3_ctf
+    working_dir: /game
+    network_mode: host
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+    volumes:
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/game:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - bash
+      - -lc
+      - |
+        chmod +x /game/ioq3ded.x86_64 || true
+        # Motor anterior (cnq3-server-x64): tenia el bug de "gamestate message
+        # buffer overflow" que pateaba clientes con varios bots/arenas cargadas.
+        # Volvimos a ioq3ded (mismo motor que FFA/1v1/2v2/CA) el 2026-09-26.
+        mkdir -p /game/instances/srv_ctf
+        /game/ioq3ded.x86_64 \
+        +set fs_basepath /game \
+        +set fs_homepath /game/instances/srv_ctf \
+        +set fs_game cpma \
+        +set dedicated 2 \
+        +set sv_pure 0 \
+        +set net_port 27964 \
+        +set sv_allowDownload 1 \
+        +set sv_pure 1 \
+        +set sv_dlURL "https://q3dl.thrallguards.com.ar/" \
+        +set mode_start CTF \
+        +set g_gametype 4 \
+        +set com_hunkMegs 256 \
+        +set com_zoneMegs 128 \
+        +set com_soundMegs 128 \
+        +set logfile 3 \
+        +exec cfg/yimq3a-cpma-ctf-server-gemini.cfg \
+        +exec cfg-maps/ctfmaps.cfg \
+        +exec cfg-maps/nextmap_ctf.cfg \
+        +set server_motdfile "motd.txt" \
+        +set sv_demoRecord 1
+    restart: unless-stopped
+
+  # Servidor: Clan Arena
+  quake3_ca:
+    image: ubuntu:24.04
+    container_name: quake3_clan_arena
+    working_dir: /game
+    network_mode: host
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+    volumes:
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/game:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - bash
+      - -lc
+      - |
+        chmod +x /game/ioq3ded.x86_64 || true
+        # Motor alternativo (a mano si hace falta volver): /game/cnq3-server-x64
+        mkdir -p /game/instances/srv_ca
+        /game/ioq3ded.x86_64 \
+        +set fs_basepath /game \
+        +set fs_homepath /game/instances/srv_ca \
+        +set fs_game cpma \
+        +set dedicated 2 \
+        +set net_port 27965 \
+        +set sv_allowDownload 1 \
+        +set sv_pure 1 \
+        +set sv_dlURL "https://q3dl.thrallguards.com.ar/" \
+        +set mode_start ca \
+        +set g_gametype 5 \
+        +set com_hunkMegs 256 \
+        +set com_zoneMegs 128 \
+        +set com_soundMegs 128 \
+        +set logfile 3 \
+        +exec cfg/yimq3a-cpma-ca-server-gemini.cfg \
+        +exec cfg-maps/nextmap_ca.cfg \
+        +set server_motdfile "motd.txt" \
+        +set sv_demoRecord 1
+    restart: unless-stopped
+
+  # Servidor: Freeze Tag (CPMA modes/FTUS.cfg, mapas de TDM) -- agregado 2026-10-04
+  quake3_ft:
+    image: ubuntu:24.04
+    container_name: quake3_freeze_tag
+    working_dir: /game
+    network_mode: host
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+    volumes:
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/game:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - bash
+      - -lc
+      - |
+        chmod +x /game/ioq3ded.x86_64 || true
+        # Motor alternativo (a mano si hace falta volver): /game/cnq3-server-x64
+        mkdir -p /game/instances/srv_ft
+        /game/ioq3ded.x86_64 \
+        +set fs_basepath /game \
+        +set fs_homepath /game/instances/srv_ft \
+        +set fs_game cpma \
+        +set dedicated 2 \
+        +set net_port 27966 \
+        +set sv_allowDownload 1 \
+        +set sv_pure 1 \
+        +set sv_dlURL "https://q3dl.thrallguards.com.ar/" \
+        +set mode_start FTUS \
+        +set g_gametype 6 \
+        +set com_hunkMegs 256 \
+        +set com_zoneMegs 128 \
+        +set com_soundMegs 128 \
+        +set logfile 3 \
+        +exec cfg/yimq3a-cpma-ft-server-gemini.cfg \
+        +exec cfg-maps/nextmap_ft.cfg \
+        +set server_motdfile "motd.txt" \
+        +set sv_demoRecord 1
+    restart: unless-stopped
+
+  # Servidor: Rocket Arena (CPMA modes/RA3.cfg, ra3map1-20 enlazados de arena/ a baseq3/; sin bots: esos mapas no traen .aas) -- agregado 2026-10-04
+  quake3_ra3:
+    image: ubuntu:24.04
+    container_name: quake3_rocket_arena
+    working_dir: /game
+    network_mode: host
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+    volumes:
+      - /mnt/ssd-jellyfin/gamesrv/Quake3:/game:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    command:
+      - bash
+      - -lc
+      - |
+        chmod +x /game/ioq3ded.x86_64 || true
+        # Motor alternativo (a mano si hace falta volver): /game/cnq3-server-x64
+        mkdir -p /game/instances/srv_ra3
+        /game/ioq3ded.x86_64 \
+        +set fs_basepath /game \
+        +set fs_homepath /game/instances/srv_ra3 \
+        +set fs_game cpma \
+        +set dedicated 2 \
+        +set net_port 27967 \
+        +set sv_allowDownload 1 \
+        +set sv_pure 1 \
+        +set sv_dlURL "https://q3dl.thrallguards.com.ar/" \
+        +set mode_start RA3 \
+        +set g_gametype 5 \
+        +set com_hunkMegs 256 \
+        +set com_zoneMegs 128 \
+        +set com_soundMegs 128 \
+        +set logfile 3 \
+        +exec cfg/yimq3a-cpma-ra3-server-gemini.cfg \
+        +exec cfg-maps/nextmap_ra3.cfg \
+        +set server_motdfile "motd.txt" \
+        +set sv_demoRecord 1
+    restart: unless-stopped
