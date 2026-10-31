@@ -1,9 +1,9 @@
-# q3_server_tools — TODO el proyecto en un solo compose.
-# Hoy en Portainer corre repartido en stacks/*.yml (34, 39, 40, launcher suelto y q3-panel); este archivo es la
-# versión unificada para migrar a un único stack (eso recrea todos los containers: hacerlo con los servers vacíos).
+# q3_server_tools — TODO el proyecto Quake 3 en un solo stack de Portainer (2026-10-31).
+# Arranca y para todo junto; cada pieza sigue en su container (se reinician por separado desde el panel :3020).
+# Código y datos en el NAS (projects/q3_server_tools, gamesrv/Quake3). Antes eran los stacks 34, 39, 40, 41 y 58.
 services:
 
-  # ===== Los 8 servers fijos + watcher (Portainer stack 34 quake3_server) =====
+  # ===== Los 8 servers fijos + watcher (antes stack 34 quake3_server) =====
   # Watcher (codigo en projects/q3_server_tools/watcher, github yimgame/q3_server_tools):
   # alias next/prev/volver en los 8 servers, AAS de bots automatico con bspc y salud de CTF
   quake3_ctf_nextmap_watcher:
@@ -358,7 +358,7 @@ services:
         +set sv_demoRecord 1
     restart: unless-stopped
 
-  # ===== FastDL (Portainer stack 40) =====
+  # ===== FastDL (antes stack 40) =====
   q3-fastdl:
     image: nginx:alpine
     container_name: q3-fastdl
@@ -392,7 +392,7 @@ services:
         nginx -g 'daemon off;'
     restart: unless-stopped
 
-  # ===== Generador de listas de mapas (Portainer stack 39) =====
+  # ===== Generador de listas de mapas (antes stack 39) =====
   q3-map-config-generator:
     image: python:3.13-slim
     container_name: q3-map-config-generator
@@ -417,7 +417,7 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "2" }
 
-  # ===== Launcher (container suelto, ver stacks/q3-launcher.yml) =====
+  # ===== Launcher (antes stack 41) =====
   q3-launcher:
     image: node:22-alpine
     container_name: q3-launcher
@@ -440,7 +440,7 @@ services:
         npx --yes tsx server.ts
     restart: unless-stopped
 
-  # ===== Panel unificado =====
+  # ===== Panel unificado (antes stack 58) =====
   q3-panel:
     image: python:3.13-slim
     container_name: q3-panel

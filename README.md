@@ -22,10 +22,12 @@ sin dependencias, habla con Docker por el socket y con los servers por UDP. Solo
 | [`stacks/q3-map-config-generator.yml`](stacks/q3-map-config-generator.yml) | Generador de listas de mapas / `nextmap_<modo>.cfg` (:5050) | stack Portainer **39** |
 | [`stacks/q3-launcher.yml`](stacks/q3-launcher.yml) | Launcher web (:3010), servers bajo demanda 28060-28067 | container suelto (el stack 41 de Portainer quedó desactualizado) |
 | [`panel/`](panel/app.py) + [`stacks/q3-panel.yml`](stacks/q3-panel.yml) | Panel unificado (:3020) | stack Portainer **58** `q3-panel` |
-| [`docker-compose.yml`](docker-compose.yml) | **Todo el proyecto en un solo compose** (13 servicios), para migrar a un único stack | todavía no desplegado así |
+| [`docker-compose.yml`](docker-compose.yml) | **Todo el proyecto en un solo compose** (13 servicios) | **stack Portainer 59 `q3_server_tools`** |
 
-Los `stacks/*.yml` son copia de lo que tiene Portainer (la fuente de verdad es Portainer: si se cambia allá,
-actualizar acá y viceversa).
+**Desde 2026-10-31 todo corre como UN SOLO stack de Portainer, `q3_server_tools` (id 59), con el
+[`docker-compose.yml`](docker-compose.yml) de este repo**: arranca y para todo junto, y cada pieza sigue en su propio
+container (el panel puede reiniciar una sola). Los `stacks/*.yml` quedan como referencia de cada parte por separado
+(eran los stacks 34, 39, 40, 41 y 58).
 
 ## Repos relacionados (no se copian acá)
 
@@ -46,5 +48,6 @@ forced command del host que solo puede reiniciar el server CTF; nunca va al repo
 
 - 2026-10-26: se crea este repo; el watcher se mueve acá desde `q3_server_launcher/watcher`; panel unificado (:3020);
   compose unificado validado con `docker compose config`.
+- 2026-10-31: migrado a un único stack de Portainer (`q3_server_tools`, id 59); se borraron los stacks 34, 39, 40, 41 y 58.
 - Los scripts viejos de `Quake3/scripts` (`ctf_nextmap_watcher.py`, `generar_nextmap.py`, `aplicar_nextmap.py`)
   quedaron reemplazados por el watcher y ya no corren.
